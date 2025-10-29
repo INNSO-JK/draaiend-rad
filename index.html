@@ -1,1 +1,174 @@
-https://chatgpt.com/canvas/shared/68dccf1f5b4c81919f0c4d78feb4e291
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <title>Draaiend Rad</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    canvas {
+      border: 2px solid #333;
+      border-radius: 50%;
+    }
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #winner {
+      margin-top: 20px;
+      font-size: 20px;
+      font-weight: bold;
+      color: darkgreen;
+    }
+    #options {
+      margin-bottom: 20px;
+    }
+    textarea {
+      width: 300px;
+      height: 100px;
+    }
+  </style>
+</head>
+<body>
+  <div id="options">
+    <p>Vul de opties in (één per regel):</p>
+    <textarea id="inputOptions">Pizza
+Sushi
+Pasta
+Hamburger
+Salade
+Friet</textarea><br>
+    <button onclick="updateOptions()">Update rad</button>
+  </div>
+
+  <canvas id="wheel" width="400" height="400"></canvas>
+  <button onclick="spin()">Draai!</button>
+  <div id="winner"></div>
+
+  <audio id="tickSound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"></audio>
+
+  <script>
+    const canvas = document.getElementById("wheel");
+    const ctx = canvas.getContext("2d");
+    const tickSound = document.getElementById("tickSound");
+    let options = ["Pizza", "Sushi", "Pasta", "Hamburger", "Salade", "Friet"];
+    let startAngle = 0;
+    let arc = Math.PI * 2 / options.length;
+    let spinTimeout = null;
+    let spinAngleStart = 0;
+    let spinTime = 0;
+    let spinTimeTotal = 0;
+    let lastTickIndex = -1;
+
+    function drawRouletteWheel() {
+      const outsideRadius = 180;
+      const textRadius = 140;
+      const insideRadius = 20;
+
+      ctx.clearRect(0, 0, 400, 400);
+
+      ctx.strokeStyle = "black";
+      ctx.lineWidth = 2;
+      ctx.font = '16px Arial';
+
+      const colors = ["#5DC5C6", "#030E53", "#FFCED3"];
+
+      for (let i = 0; i < options.length; i++) {
+        let angle = startAngle + i * arc;
+        ctx.fillStyle = colors[i % colors.length];
+
+        ctx.beginPath();
+        ctx.arc(200, 200, outsideRadius, angle, angle + arc, false);
+        ctx.arc(200, 200, insideRadius, angle + arc, angle, true);
+        ctx.fill();
+        ctx.save();
+
+        ctx.fillStyle = "black";
+        ctx.translate(200 + Math.cos(angle + arc / 2) * textRadius,
+                      200 + Math.sin(angle + arc / 2) * textRadius);
+        ctx.rotate(angle + arc / 2);
+        let text = options[i];
+        ctx.fillText(text, -ctx.measureText(text).width / 2, 0);
+        ctx.restore();
+      }
+
+      // Pijl
+      ctx.fillStyle = "#FF143C";
+      ctx.beginPath();
+      ctx.moveTo(200 - 10, 200 - (outsideRadius + 20));
+      ctx.lineTo(200 + 10, 200 - (outsideRadius + 20));
+      ctx.lineTo(200, 200 - (outsideRadius - 5));
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function rotateWheel() {
+      spinTime += 30;
+      if (spinTime >= spinTimeTotal) {
+        stopRotateWheel();
+        return;
+      }
+      let spinAngle = spinAngleStart - easeOut(spinTime, 0, spinAngleStart, spinTimeTotal);
+      startAngle += (spinAngle * Math.PI / 180);
+      drawRouletteWheel();
+
+      // Speel tikkend geluid bij het passeren van een vak
+      let degrees = startAngle * 180 / Math.PI + 90;
+      let arcd = arc * 180 / Math.PI;
+      let index = Math.floor((360 - (degrees % 360)) / arcd);
+      if (index !== lastTickIndex) {
+        tickSound.currentTime = 0;
+        tickSound.play();
+        lastTickIndex = index;
+      }
+
+      spinTimeout = setTimeout(rotateWheel, 30);
+    }
+
+    function stopRotateWheel() {
+      clearTimeout(spinTimeout);
+      let degrees = startAngle * 180 / Math.PI + 90;
+      let arcd = arc * 180 / Math.PI;
+      let index = Math.floor((360 - (degrees % 360)) / arcd);
+      ctx.save();
+      ctx.font = 'bold 24px Arial';
+      let text = options[index];
+      document.getElementById("winner").innerText = "🎉 Het rad stopt op: " + text;
+      ctx.restore();
+    }
+
+    function easeOut(t, b, c, d) {
+      const ts = (t/=d)*t;
+      const tc = ts*t;
+      return b+c*(tc + -3*ts + 3*t);
+    }
+
+    function spin() {
+      spinAngleStart = Math.random() * 10 + 10;
+      spinTime = 0;
+      // Laat het rad ongeveer 2x zo lang draaien
+      spinTimeTotal = Math.random() * 6000 + 8000;
+      rotateWheel();
+    }
+
+    function updateOptions() {
+      const input = document.getElementById("inputOptions").value.trim();
+      options = input.split(/\n+/);
+      arc = Math.PI * 2 / options.length;
+      drawRouletteWheel();
+      document.getElementById("winner").innerText = "";
+    }
+
+    drawRouletteWheel();
+  </script>
+</body>
+</html>
